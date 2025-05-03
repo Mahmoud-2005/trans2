@@ -1,23 +1,6 @@
-# app.py
-import streamlit as st
-from transformers import pipeline
+from langdetect import detect, DetectorFactory
 
-# Load pipelines
-@st.cache_resource
-def load_sentiment_analyzer():
-    return pipeline("sentiment-analysis")
-
-@st.cache_resource
-def load_ner_pipeline():
-    return pipeline("ner", grouped_entities=True)
-
-@st.cache_resource
-def load_summarizer():
-    return pipeline("summarization")
-
-sentiment_analyzer = load_sentiment_analyzer()
-ner_pipeline = load_ner_pipeline()
-summarizer = load_summarizer()
+DetectorFactory.seed = 0
 
 # Streamlit UI
 st.title("Advanced Text Analysis App")
@@ -25,6 +8,14 @@ st.title("Advanced Text Analysis App")
 text_input = st.text_area("Enter text to analyze:", "Streamlit is an amazing tool for building data apps!")
 
 if st.button("Analyze"):
+    # Language Detection
+    st.subheader("Language Detection:")
+    try:
+        language = detect(text_input)
+        st.success(f"Detected Language: {language}")
+    except Exception as e:
+        st.error(f"Error detecting language: {e}")
+
     # Sentiment Analysis
     sentiment = sentiment_analyzer(text_input)
     label = sentiment[0]['label']
@@ -39,8 +30,14 @@ if st.button("Analyze"):
 
     # Text Summarization
     st.subheader("Text Summary:")
-    if len(text_input.split()) > 20:  # Summarization works better with longer texts
+    if len(text_input.split()) > 20:
         summary = summarizer(text_input, max_length=50, min_length=25, do_sample=False)
         st.write(summary[0]['summary_text'])
     else:
         st.warning("Text is too short for summarization. Please enter a longer text.")
+
+    # Text Classification
+    st.subheader("Text Classification:")
+    classification = text_classifier(text_input)
+    for result in classification:
+        st.write(f"Label: {result['label']}, Score: {result['score']:.2f}")
