@@ -11,13 +11,18 @@ def load_sentiment_analyzer():
 def load_ner_pipeline():
     return pipeline("ner", grouped_entities=True)
 
+@st.cache_resource
+def load_summarizer():
+    return pipeline("summarization")
+
 sentiment_analyzer = load_sentiment_analyzer()
 ner_pipeline = load_ner_pipeline()
+summarizer = load_summarizer()
 
 # Streamlit UI
 st.title("Advanced Text Analysis App")
 
-text_input = st.text_area("Enter text to analyze:", "I love programming in Python at Microsoft!")
+text_input = st.text_area("Enter text to analyze:", "Streamlit is an amazing tool for building data apps!")
 
 if st.button("Analyze"):
     # Sentiment Analysis
@@ -31,3 +36,11 @@ if st.button("Analyze"):
     entities = ner_pipeline(text_input)
     for entity in entities:
         st.write(f"Entity: {entity['word']}, Type: {entity['entity_group']}, Score: {entity['score']:.2f}")
+
+    # Text Summarization
+    st.subheader("Text Summary:")
+    if len(text_input.split()) > 20:  # Summarization works better with longer texts
+        summary = summarizer(text_input, max_length=50, min_length=25, do_sample=False)
+        st.write(summary[0]['summary_text'])
+    else:
+        st.warning("Text is too short for summarization. Please enter a longer text.")
