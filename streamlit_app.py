@@ -1,43 +1,84 @@
-from langdetect import detect, DetectorFactory
+# app.py
+import streamlit as st
+from transformers import pipeline
 
-DetectorFactory.seed = 0
+# Load pipelines
+@st.cache_resource
+def load_sentiment_analyzer():
+    return pipeline("sentiment-analysis")
 
-# Streamlit UI
-st.title("Advanced Text Analysis App")
+@st.cache_resource
+def load_ner_pipeline():
+    return pipeline("ner", grouped_entities=True)
 
-text_input = st.text_area("Enter text to analyze:", "Streamlit is an amazing tool for building data apps!")
+@st.cache_resource
+def load_summarizer():
+    return pipeline("summarization")
 
-if st.button("Analyze"):
-    # Language Detection
-    st.subheader("Language Detection:")
-    try:
-        language = detect(text_input)
-        st.success(f"Detected Language: {language}")
-    except Exception as e:
-        st.error(f"Error detecting language: {e}")
+@st.cache_resource
+def load_text_generator():
+    return pipeline("text-generation", model="gpt2")
 
-    # Sentiment Analysis
-    sentiment = sentiment_analyzer(text_input)
-    label = sentiment[0]['label']
-    score = sentiment[0]['score']
-    st.success(f"Sentiment: {label} (Confidence: {score:.2f})")
+# Load models
+sentiment_analyzer = load_sentiment_analyzer()
+ner_pipeline = load_ner_pipeline()
+summarizer = load_summarizer()
+text_generator = load_text_generator()
 
-    # Named Entity Recognition (NER)
-    st.subheader("Named Entities:")
-    entities = ner_pipeline(text_input)
-    for entity in entities:
-        st.write(f"Entity: {entity['word']}, Type: {entity['entity_group']}, Score: {entity['score']:.2f}")
+# UI
+st.title("✍️ Smart Writing Assistant")
 
-    # Text Summarization
-    st.subheader("Text Summary:")
-    if len(text_input.split()) > 20:
-        summary = summarizer(text_input, max_length=50, min_length=25, do_sample=False)
-        st.write(summary[0]['summary_text'])
-    else:
-        st.warning("Text is too short for summarization. Please enter a longer text.")
+text_input = st.text_area("📝 Enter your text:", "Streamlit is an amazing tool for building data apps!")
 
-    # Text Classification
-    st.subheader("Text Classification:")
-    classification = text_classifier(text_input)
-    for result in classification:
-        st.write(f"Label: {result['label']}, Score: {result['score']:.2f}")
+if st.button("🚀 Start Analysis and Suggestions") and text_input.strip():
+    tab1, tab2, tab3 = st.tabs(["📊 Analysis", "✨ Smart Suggestions", "💡 Writing Tips"])
+
+    with tab1:
+        st.header("📊 Text Analysis")
+
+        st.subheader("💬 Sentiment Analysis")
+        sentiment = sentiment_analyzer(text_input)
+        label = sentiment[0]['label']
+        score = sentiment[0]['score']
+        st.success(f"Sentiment: {label} (Confidence: {score:.2f})")
+
+        st.subheader("🔎 Named Entity Recognition (NER)")
+        entities = ner_pipeline(text_input)
+        if entities:
+            for entity in entities:
+                st.write(f"• `{entity['word']}` - Type: **{entity['entity_group']}** - Score: {entity['score']:.2f}")
+        else:
+            st.info("No named entities were found in the text.")
+
+        st.subheader("📝 Text Summarization")
+        if len(text_input.split()) > 20:
+            summary = summarizer(text_input, max_length=50, min_length=25, do_sample=False)
+            st.success(summary[0]['summary_text'])
+        else:
+            st.warning("The text is too short for summarization. Please enter more than 20 words.")
+
+    with tab2:
+        st.header("✨ Smart Suggestions")
+
+        st.subheader("🧠 Suggested Catchy Title")
+        prompt = "Suggest a catchy title for the following content: " + text_input
+        title = text_generator(prompt, max_length=20, num_return_sequences=1)[0]['generated_text']
+        st.success(title.replace(prompt, "").strip())
+
+        st.subheader("🔁 Paraphrase Text")
+        rewrite_prompt = "Paraphrase the following paragraph to improve clarity and style:\n" + text_input
+        rewritten = text_generator(rewrite_prompt, max_length=150, num_return_sequences=1)[0]['generated_text']
+        st.success(rewritten.replace(rewrite_prompt, "").strip())
+
+    with tab3:
+        st.header("💡 Writing Tips")
+
+        if "negative" in label.lower():
+            st.write("🔹 Consider using a more positive tone if appropriate.")
+        if not entities:
+            st.write("🔹 Try adding named entities (like people, places, or organizations) for more specificity.")
+        if len(text_input.split()) < 50:
+            st.write("🔹 The text is relatively short. Try expanding it with more details or examples.")
+        st.write("🔹 Make sure your text is well-structured with proper punctuation and transitions.")
+else:
+    st.info("💡 Please enter your text above and click the button to begin analysis and suggestions.")
