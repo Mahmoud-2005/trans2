@@ -2,19 +2,20 @@
 import streamlit as st
 from transformers import pipeline
 
-# Load translation pipeline (English to French)
+# Load sentiment analysis pipeline
 @st.cache_resource
-def load_translator():
-    return pipeline("translation_en_to_fr")
+def load_sentiment_analyzer():
+    return pipeline("sentiment-analysis")
 
-translator = load_translator()
+sentiment_analyzer = load_sentiment_analyzer()
 
 # Streamlit UI
-st.title("English to French Translator")
+st.title("Sentiment Analysis App")
 
-english_text = st.text_input("Enter English text:", "The cat is on the table.")
+text_input = st.text_area("Enter text to analyze sentiment:", "I love programming!")
 
-if st.button("Translate"):
-    translation = translator(english_text)
-    french_text = translation[0]['translation_text']
-    st.success(f"French: {french_text}")
+if st.button("Analyze Sentiment"):
+    sentiment = sentiment_analyzer(text_input)
+    label = sentiment[0]['label']
+    score = sentiment[0]['score']
+    st.success(f"Sentiment: {label} (Confidence: {score:.2f})")
